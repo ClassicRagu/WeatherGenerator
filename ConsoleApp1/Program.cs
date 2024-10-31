@@ -25,6 +25,8 @@ class Program
 
 		var zonesObj = new Dictionary<string, int>();
 		var zonesMapper = new List<string>();
+		zonesMapper.Add("import { ValidZones } from \"../static/AllowedZones\";");
+		zonesMapper.Add("type ZoneObj = {Name: ValidZones, Rate: Number}");
 		var allowedZones = "type ValidZones = ";
 
 		foreach (var column in lumina.GetExcelSheet<Map>())
@@ -55,7 +57,7 @@ class Program
 						.Replace("???", "UNKOWN")
 						// Mt. Gulg
 						.Replace(".", "");
-					processedName = $"export const ZONE_{processedName} = {{Name: \"{placeName}\", Rate: {rate}}}";
+					processedName = $"export const ZONE_{processedName}: ZoneObj = {{Name: \"{placeName}\", Rate: {rate}}}";
 					if (!zonesMapper.Contains(processedName))
 					{
 						zonesMapper.Add(processedName);
