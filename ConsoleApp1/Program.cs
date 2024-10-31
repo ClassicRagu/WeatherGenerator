@@ -11,7 +11,7 @@ class Program
 		// This should probably be made into an arg at some point
 		var lumina = new Lumina.GameData("C:\\Program Files (x86)\\SquareEnix\\FINAL FANTASY XIV - A Realm Reborn\\game\\sqpack", new() { DefaultExcelLanguage = Lumina.Data.Language.English });
 
-		var weatherRateObj = new ArrayList();
+		var weatherRateObj = new List<CompiledWeather[]>();
 
 		foreach (var column in lumina.GetExcelSheet<WeatherRate>())
 		{
@@ -24,12 +24,44 @@ class Program
 		}
 
 		var zonesObj = new Dictionary<string, int>();
+		var zonesMapper = new List<string>();
+		var allowedZones = "type ValidZones = ";
 
 		foreach (var column in lumina.GetExcelSheet<Map>())
 		{
 			try
 			{
-				zonesObj.Add(lumina.GetExcelSheet<PlaceName>().GetRow(column.PlaceName.RowId).Name.ExtractText(), column.TerritoryType.Value.WeatherRate);
+				var placeName = lumina.GetExcelSheet<PlaceName>().GetRow(column.PlaceName.RowId).Name.ExtractText();
+				var rate = column.TerritoryType.Value.WeatherRate;
+				// A bit of a nasty workaround, we only take the first rate we come across.
+				// This may cause inaccuracies that need to be fixed in the future.
+				var value = 0;
+				if (placeName != "" && !zonesObj.TryGetValue(placeName, out value))
+				{
+					allowedZones = allowedZones + $"\"{placeName}\" | ";
+					var processedName = placeName.ToUpperInvariant()
+						// Remove common characters
+						.Replace(" ", "_")
+						.Replace("-", "")
+						.Replace("'", "")
+						// (Hard) dungeons
+						.Replace("(", "")
+						.Replace(")", "")
+						// Literally just Frontlines.
+						.Replace(":", "")
+						// Omega Raids
+						.Replace(".0","")
+						// Unknown maps
+						.Replace("???", "UNKOWN")
+						// Mt. Gulg
+						.Replace(".", "");
+					processedName = $"export const ZONE_{processedName} = {{Name: \"{placeName}\", Rate: {rate}}}";
+					if (!zonesMapper.Contains(processedName))
+					{
+						zonesMapper.Add(processedName);
+					}
+					zonesObj.Add(placeName, column.TerritoryType.Value.WeatherRate);
+				}
 			}
 			catch
 			{
@@ -45,8 +77,12 @@ class Program
 
 		string weatherRateFilePath = Path.Combine(directoryPath, "WeatherRates.json");
 		string zoneFilePath = Path.Combine(directoryPath, "Zones.json");
+		string zoneMapperFilePath = Path.Combine(directoryPath, "ZoneMapper.ts");
+		string allowedZonesFilePath = Path.Combine(directoryPath, "AllowedZones.ts");
 
 		File.WriteAllText(weatherRateFilePath, JsonConvert.SerializeObject(weatherRateObj, Formatting.Indented));
 		File.WriteAllText(zoneFilePath, JsonConvert.SerializeObject(zonesObj, Formatting.Indented));
+		File.WriteAllLines(zoneMapperFilePath, zonesMapper);
+		File.WriteAllText(allowedZonesFilePath, allowedZones);
 	}
 }
