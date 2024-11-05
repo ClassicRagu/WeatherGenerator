@@ -26,7 +26,8 @@ class Program
 		var zonesObj = new Dictionary<string, int>();
 		var zonesMapper = new List<string>();
 		zonesMapper.Add("import { ZoneObject } from \"../types/ZoneObject\"");
-		var allowedZones = "type ValidZones = ";
+		var allowedZones = "export type ValidZones = ";
+		var allowedWeathers = "export type AllowedWeathers = \"\" | ";
 
 		foreach (var column in lumina.GetExcelSheet<Map>())
 		{
@@ -70,6 +71,19 @@ class Program
 			}
 		}
 
+		foreach (var column in lumina.GetExcelSheet<Weather>())
+		{
+			var weatherName = column.Name.ExtractText();
+			if(!allowedWeathers.Contains(weatherName))
+			{
+				allowedWeathers = allowedWeathers + $"\"{weatherName}\" | ";
+			}
+		}
+
+		// Remove final |
+		allowedZones = allowedZones.Remove(allowedZones.Length - 2);
+		allowedWeathers = allowedWeathers.Remove(allowedWeathers.Length - 2);
+
 		string directoryPath = Path.Combine(Directory.GetCurrentDirectory(), $"json/");
 		if (!Directory.Exists(directoryPath))
 		{
@@ -80,10 +94,12 @@ class Program
 		string zoneFilePath = Path.Combine(directoryPath, "Zones.json");
 		string zoneMapperFilePath = Path.Combine(directoryPath, "ZoneMapper.ts");
 		string allowedZonesFilePath = Path.Combine(directoryPath, "AllowedZones.ts");
+		string allowedWeathersFilePath = Path.Combine(directoryPath, "AllowedWeathers.ts");
 
 		File.WriteAllText(weatherRateFilePath, JsonConvert.SerializeObject(weatherRateObj, Formatting.Indented));
 		File.WriteAllText(zoneFilePath, JsonConvert.SerializeObject(zonesObj, Formatting.Indented));
 		File.WriteAllLines(zoneMapperFilePath, zonesMapper);
 		File.WriteAllText(allowedZonesFilePath, allowedZones);
+		File.WriteAllText(allowedWeathersFilePath, allowedWeathers);
 	}
 }
